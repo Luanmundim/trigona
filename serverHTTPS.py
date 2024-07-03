@@ -1,12 +1,14 @@
 import socket
 import socketserver
-import http.server
 import datetime
-import urllib.parse as urlparse
 from html import escape
 import json
 import os
+import ssl
+import subprocess
 
+import http.server
+import urllib.parse as urlparse
 
 def get_ipv6_address():
     # Get the host name
@@ -22,9 +24,9 @@ def get_ipv6_address():
 def create_log_files():
     hostname = socket.gethostname()
     current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
-    log_filename = f"{hostname}-{current_datetime}-server.log"
-    json_filename = f"{hostname}-{current_datetime}-server.json"
-    errors_filename = f"{hostname}-{current_datetime}-errors.log"
+    log_filename = f"{hostname}-{current_datetime}-serverHTTPS.log"
+    json_filename = f"{hostname}-{current_datetime}-serverHTTPS.json"
+    errors_filename = f"{hostname}-{current_datetime}-errorsHTTPS.log"
 
     if not os.path.exists(log_filename):
         with open(log_filename, 'w') as file:
@@ -53,7 +55,7 @@ def write_server_log(condition):
 
     hostname = socket.gethostname()
     current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
-    filename = f"{hostname}-{current_datetime}-server.log"
+    filename = f"{hostname}-{current_datetime}-serverHTTPS.log"
     with open(filename, 'r+') as file:
         logs = json.load(file)
         logs.append(log_message)
@@ -72,7 +74,7 @@ def log_error(error_message):
     }
     hostname = socket.gethostname()
     current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
-    filename = f"{hostname}-{current_datetime}-errors.log"
+    filename = f"{hostname}-{current_datetime}-errorsHTTPS.log"
     with open(filename, 'r+') as file:
         logs = json.load(file)
         logs.append(log_message)
@@ -102,7 +104,7 @@ def log_attempt(self, username, password, method, status_code, user_agent):
 
     hostname = socket.gethostname()
     current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
-    filename = f"{hostname}-{current_datetime}-server.json"
+    filename = f"{hostname}-{current_datetime}-serverHTTPS.json"
     with open(filename, 'r+') as file:
         logs = json.load(file)
         logs.append(log_message)
@@ -164,9 +166,17 @@ if __name__ == '__main__':
     try:
         create_log_files()
         destinationIP = get_ipv6_address()
-        server_address = ('::', 8080)
+        server_address = ('::', 4443)
         httpd = IPv6Server(server_address, MyHandler)
-        print(f'''Server running on http://[{destinationIP}]:8080''')
+        
+        # Create an SSL context
+        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        context.load_cert_chain(certfile='cert.pem', keyfile='key.pem', password='adminluan')
+        
+        # Wrap the HTTP server in SSL using the SSL context
+        httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+        
+        print(f'''Server running on https://[{destinationIP}]:4443''')
         write_server_log('starts')
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -174,3 +184,4 @@ if __name__ == '__main__':
         print('Server stopped')
     except Exception as e:
         log_error(str(e))
+
