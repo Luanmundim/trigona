@@ -46,7 +46,7 @@ if __name__ == '__main__':
     sleep(1)
     start_service('start', 'serverHTTPS', 0)
     sleep(1)
-    start_cowrie('start', 'cowrie', 0)
+    start_cowrie('start', 'cowrie')
     sleep(1)
 
 
