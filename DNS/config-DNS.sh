@@ -13,6 +13,15 @@ check_log_file() {
 
 start_DNS() {
     echo "Starting DNS..."
+    # Check if the process is already running
+    if [ -f DNS.pid ]; then
+        PID=$(cat DNS.pid)
+        if ps -p $PID > /dev/null; then
+            echo "DNS is already running with PID: $PID"
+            return
+        fi
+    fi
+    
     # Run the Python script in the background
     sudo python3 $SERVER_SCRIPT &
     # Save the process ID of the DNS
