@@ -1,11 +1,12 @@
 import socket
 import socketserver
-import http.server
 import datetime
-import urllib.parse as urlparse
 from html import escape
 import json
 import os
+
+import http.server
+import urllib.parse as urlparse
 
 
 def get_ipv6_address():
@@ -82,8 +83,7 @@ def log_error(error_message):
         print(f"Error logged in {filename}")
 
 
-
-def log_attempt(self, username, password, method, status_code, user_agent):
+def log_attempt(self, username, password, method, status_code, user_agent, destinationIP):
     timestamp = datetime.datetime.now()
     log_message = {
         "Username": escape(username),
@@ -98,7 +98,6 @@ def log_attempt(self, username, password, method, status_code, user_agent):
         "URL": self.path,
         "Timestamp": str(timestamp)
     }  
-    
 
     hostname = socket.gethostname()
     current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -111,8 +110,10 @@ def log_attempt(self, username, password, method, status_code, user_agent):
         file.truncate()
         print(f"Log saved in {filename}")
 
+
 class IPv6Server(socketserver.TCPServer):
     address_family = socket.AF_INET6
+
 
 class MyHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -134,7 +135,7 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(html.encode('utf-8'))
             user_agent = self.headers.get('User-Agent')
             
-            log_attempt(self, '', '', 'GET', '200', user_agent)
+            log_attempt(self, '', '', 'GET', '200', user_agent, destinationIP)
         except Exception as e:
             log_error(str(e))
 
@@ -155,7 +156,7 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
         status_code = '200'
 
         try:
-            log_attempt(self, username, password, 'POST', status_code, user_agent)
+            log_attempt(self, username, password, 'POST', status_code, user_agent, destinationIP)
         except Exception as e:
             log_error(str(e))
 
