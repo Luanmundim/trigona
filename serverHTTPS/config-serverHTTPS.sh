@@ -14,6 +14,15 @@ check_log_file() {
 
 start_server() {
     echo "Starting server..."
+    # Check if the server is already running
+    if [ -f serverHTTPS.pid ]; then
+        PID=$(cat serverHTTPS.pid)
+        if lsof -i :$SERVER_PORT -t -sTCP:LISTEN | grep -q $PID; then
+            echo "Server is already running with PID: $PID"
+            return
+        fi
+    fi
+
     # Run the Python script in the background
     python3 $SERVER_SCRIPT &
     # Save the process ID of the server
