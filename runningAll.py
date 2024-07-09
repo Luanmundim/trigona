@@ -22,7 +22,7 @@ def start_service(status, service, delay, privilege =''):
 
 def start_cowrie(status, service):
     # Change directory to /home/ubuntu/service/
-    os.chdir(f'/home/cowrie/{service}/')
+    os.chdir(f'/home/ubuntu/trigona/cowrie/{service}/')
 
     # Configure logging
     current_day = datetime.now().strftime("%Y-%m-%d")
@@ -31,7 +31,7 @@ def start_cowrie(status, service):
     logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     # Run ./config-service.sh start
-    os.system(f'cd /home/cowrie/{service} && sudo su cowrie./bin/{service} {status}')
+    os.system(f'cd /home/ubuntu/trigona/cowrie/{service} && sudo su cowrie./bin/{service} {status}')
     logging.info(f'Started {service} with status: {status}')
 
 
