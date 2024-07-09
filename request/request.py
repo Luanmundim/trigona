@@ -28,11 +28,11 @@ host_ipv6 = socket.getaddrinfo(hostname, None, socket.AF_INET6)[0][4][0]
 current_date = datetime.now().strftime("%Y%m%d%H%M%S")
 
 # Define the path to the input CSV file and the error log file
-input_csv_path = 'internalIP.csv'
-error_log_path = f'/home/scripts/log/internalCrawler/{hostname}-{current_date}-internalCrawler-error-log.json'
+input_csv_path = 'request.csv'
+error_log_path = f'/home/scripts/log/request/{hostname}-{current_date}-request-error-log.json'
 
 # Generate the output file name based on hostname and current date
-output_file_path = f'/home/scripts/log/internalCrawler/{hostname}-{current_date}-internalCrawler.json'
+output_file_path = f'/home/scripts/log/request/{hostname}-{current_date}-request.json'
 
 # Function to ensure URL has http:// or https://
 def ensure_scheme(url):
