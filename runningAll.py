@@ -41,9 +41,9 @@ def generate_number():
 if __name__ == '__main__':
     start_service('start', 'tcpdump', 1, 'sudo ')#must be the firtst one to start
     sleep(1)
-    start_service('start', 'server', 1, 'sudo ')
+    start_service('start', 'server', 1)
     sleep(1)
-    start_service('start', 'serverHTTPS', 1, 'sudo ')
+    start_service('start', 'serverHTTPS', 1)
     sleep(1)
     start_cowrie('start', 'cowrie')
     sleep(1)
@@ -56,5 +56,5 @@ if __name__ == '__main__':
         start_service('start', 'DNS', generate_number())
         sleep(1)
     if ('request' in socket.gethostname()):
-        start_service('start', 'request', generate_number())
+        start_service('start', 'request', generate_number(), 'sudo ')
         sleep(1)
