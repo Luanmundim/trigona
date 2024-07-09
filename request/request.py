@@ -29,7 +29,7 @@ host_ipv6 = socket.getaddrinfo(hostname, None, socket.AF_INET6)[0][4][0]
 current_date = datetime.now().strftime("%Y%m%d%H%M%S")
 
 # Define the path to the input CSV file and the error log file
-input_csv_path = 'sitesipv6.csv'
+input_csv_path = 'internalIP.csv'
 # Create the directory if it doesn't exist
 directory = '/home/scripts/log/request'
 if not os.path.exists(directory):
