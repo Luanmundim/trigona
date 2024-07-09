@@ -16,7 +16,7 @@ def start_service(status, service, delay, privilege =''):
     logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     # Run ./config-service.sh start
-    os.system(f'cd /home/ubuntu/{service} && echo "{privilege}./config-{service}.sh {status}" | at now + {delay} minutes')
+    os.system(f'cd /home/ubuntu/trigona/{service} && echo "{privilege}./config-{service}.sh {status}" | at now + {delay} minutes')
     logging.info(f'Started {service} with status: {status}')
 
 
