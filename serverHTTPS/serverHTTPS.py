@@ -12,7 +12,7 @@ import http.server
 import urllib.parse as urlparse
 
 # Ensure the directory exists
-log_directory = "/home/scripts/log/serverHTTPS"
+log_directory = "/home/ubuntu/log/serverHTTPS"
 os.makedirs(log_directory, exist_ok=True)
 
 def get_ipv6_address():
