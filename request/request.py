@@ -31,19 +31,14 @@ current_date = datetime.now().strftime("%Y%m%d%H%M%S")
 # Define the path to the input CSV file and the error log file
 input_csv_path = 'internalIP.csv'
 # Create the directory if it doesn't exist
-directory = '/home/scripts/log/request'
+directory = '/home/ubuntu/log/request'
 if not os.path.exists(directory):
     os.makedirs(directory)
 
 error_log_path = f'{directory}/{hostname}-{current_date}-request-error-log.json'
 
 # Generate the output file name based on hostname and current date
-output_file_path = f'/home/scripts/log/request/{hostname}-{current_date}-request.json'
-
-# Create the directory if it doesn't exist
-directory2 = '/home/scripts/log/request'
-if not os.path.exists(directory2):
-    os.makedirs(directory2)
+output_file_path = f'/home/ubuntu/log/request/{hostname}-{current_date}-request.json'
 
 # Function to ensure URL has http:// or https://
 def ensure_scheme(url):
