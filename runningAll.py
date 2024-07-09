@@ -23,7 +23,7 @@ def start_service(status, service, delay):
 
 def start_cowrie(status, service):
     # Change directory to /home/ubuntu/trigona/service/
-    os.chdir(f'/home/ubuntu/trigona/cowrie/{service}/')
+    os.chdir(f'/home/ubuntu/trigona/{service}/')
 
     # Configure logging
     current_day = datetime.now().strftime("%Y-%m-%d")
