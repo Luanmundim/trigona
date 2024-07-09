@@ -37,7 +37,7 @@ for server in dns_servers:
     server = server.strip()
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [server]
-    dns_results[server] = {"results": [], "host_ipv6": host_ipv6}  # Initialize server entry in dictionary
+    dns_results[server] = {"results": [], "host_ipv6": host_ipv6, "timestamp": str(datetime.datetime.now())}  # Initialize server entry in dictionary with timestamp
     try:
         print(f"Processing {server} - {count} of {len(dns_servers)}...")
         # Perform an "AAAA" query to get IPv6 addresses
