@@ -12,7 +12,7 @@ def start_service(status, service, delay, privilege =''):
     # Configure logging
     current_day = datetime.now().strftime("%Y-%m-%d")
     hostname = socket.gethostname()
-    log_file = f'/home/ubuntu/trigona/log/{service}/{hostname}-{current_day}-logging-{service}.log'
+    log_file = f'/home/ubuntu/log/{service}/{hostname}-{current_day}-logging-{service}.log'
     logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     # Run ./config-service.sh start
