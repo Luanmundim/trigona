@@ -6,7 +6,7 @@ import json
 import dns.resolver
 
 # Ensure the directory exists
-log_directory = "/home/scripts/log/DNS"
+log_directory = "/home/ubuntu/log/DNS"
 os.makedirs(log_directory, exist_ok=True)
 
 count = 1
