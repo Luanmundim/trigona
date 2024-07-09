@@ -5,7 +5,7 @@ import socket
 from time import sleep
 import random
 
-def start_service(status, service, delay):
+def start_service(status, service, delay, privilege =''):
     # Change directory to /home/ubuntu/trigona/service/
     os.chdir(f'/home/ubuntu/trigona/{service}/')
 
@@ -16,14 +16,13 @@ def start_service(status, service, delay):
     logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     # Run ./config-service.sh start
-    os.system(f'cd /home/ubuntu/trigona/{service} && echo "./config-{service}.sh {status}" | at now + {delay} minutes')
+    os.system(f'cd /home/ubuntu/trigona/{service} && echo "{privilege}./config-{service}.sh {status}" | at now + {delay} minutes')
     logging.info(f'Started {service} with status: {status}')
-
 
 
 def start_cowrie(status, service):
     # Change directory to /home/ubuntu/trigona/service/
-    os.chdir(f'/home/ubuntu/trigona/cowrie/{service}/')
+    os.chdir(f'/home/cowrie/{service}/')
 
     # Configure logging
     current_day = datetime.now().strftime("%Y-%m-%d")
@@ -40,11 +39,11 @@ def generate_number():
     return random.randint(2, 12*58)
 
 if __name__ == '__main__':
-    start_service('start', 'tcpdump', 1)#must be the firtst one to start
+    start_service('start', 'tcpdump', 1, 'sudo ')#must be the firtst one to start
     sleep(1)
-    start_service('start', 'server', 1)
+    start_service('start', 'server', 1, 'sudo ')
     sleep(1)
-    start_service('start', 'serverHTTPS', 1)
+    start_service('start', 'serverHTTPS', 1, 'sudo ')
     sleep(1)
     start_cowrie('start', 'cowrie')
     sleep(1)
