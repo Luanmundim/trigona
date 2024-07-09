@@ -31,19 +31,14 @@ current_date = datetime.now().strftime("%Y%m%d%H%M%S")
 # Define the path to the input CSV file and the error log file
 input_csv_path = 'sitesipv6.csv'
 # Create the directory if it doesn't exist
-directory = '/home/scripts/log/crawler'
+directory = '/home/ubuntu/log/crawler'
 if not os.path.exists(directory):
     os.makedirs(directory)
 
 error_log_path = f'{directory}/{hostname}-{current_date}-crawler-error-log.json'
 
 # Generate the output file name based on hostname and current date
-output_file_path = f'/home/scripts/log/crawler/{hostname}-{current_date}-crawler.json'
-
-# Create the directory if it doesn't exist
-directory2 = '/home/scripts/log/crawler'
-if not os.path.exists(directory2):
-    os.makedirs(directory2)
+output_file_path = f'/home/ubuntu/log/crawler/{hostname}-{current_date}-crawler.json'
 
 # Function to ensure URL has http:// or https://
 def ensure_scheme(url):
