@@ -16,22 +16,22 @@ def start_service(status, service, delay, privilege =''):
     logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     # Run ./config-service.sh start
-    os.system(f'cd /home/ubuntu/trigona/{service} && echo "{privilege}./config-{service}.sh {status}" | at now + {delay} minutes')
+    os.system(f'cd /home/ubuntu/{service} && echo "{privilege}./config-{service}.sh {status}" | at now + {delay} minutes')
     logging.info(f'Started {service} with status: {status}')
 
 
 def start_cowrie(status, service):
-    # Change directory to /home/ubuntu/trigona/service/
+    # Change directory to /home/ubuntu/service/
     os.chdir(f'/home/cowrie/{service}/')
 
     # Configure logging
     current_day = datetime.now().strftime("%Y-%m-%d")
     hostname = socket.gethostname()
-    log_file = f'/home/ubuntu/trigona/log/{service}/{hostname}-{current_day}-logging-{service}.log'
+    log_file = f'/home/ubuntu/log/{service}/{hostname}-{current_day}-logging-{service}.log'
     logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     # Run ./config-service.sh start
-    os.system(f'cd /home/ubuntu/trigona/cowrie/{service} && sudo su cowrie./bin/{service} {status}')
+    os.system(f'cd /home/cowrie/{service} && sudo su cowrie./bin/{service} {status}')
     logging.info(f'Started {service} with status: {status}')
 
 
