@@ -6,6 +6,7 @@ import time
 import socket
 import json
 from datetime import datetime
+import os
 
 # Custom function to force the use of IPv6
 def force_ipv6():
@@ -29,10 +30,20 @@ current_date = datetime.now().strftime("%Y%m%d%H%M%S")
 
 # Define the path to the input CSV file and the error log file
 input_csv_path = 'sitesipv6.csv'
-error_log_path = f'/home/scripts/log/crawler/{hostname}-{current_date}-crawler-error-log.json'
+# Create the directory if it doesn't exist
+directory = '/home/scripts/log/crawler'
+if not os.path.exists(directory):
+    os.makedirs(directory)
+
+error_log_path = f'{directory}/{hostname}-{current_date}-crawler-error-log.json'
 
 # Generate the output file name based on hostname and current date
 output_file_path = f'/home/scripts/log/crawler/{hostname}-{current_date}-crawler.json'
+
+# Create the directory if it doesn't exist
+directory2 = '/home/scripts/log/crawler'
+if not os.path.exists(directory2):
+    os.makedirs(directory2)
 
 # Function to ensure URL has http:// or https://
 def ensure_scheme(url):
@@ -64,10 +75,10 @@ with open(input_csv_path, mode='r') as csv_file:
             start_time = time.time()
             response = session.get(website_url, timeout=2)  # Set the timeout to 2 seconds
             response_time = time.time() - start_time
-            # Include the host's IPv6 address in the result
-            results.append({"website_id": website_id, "website_url": website_url, "status_code": response.status_code, "response_time": response_time, "origin_ipv6": host_ipv6})
+            # Include the host's IPv6 address and timestamp in the result
+            results.append({"website_id": website_id, "website_url": website_url, "status_code": response.status_code, "response_time": response_time, "origin_ipv6": host_ipv6, "timestamp": datetime.now().isoformat()})
         except requests.RequestException as e:
-            errors.append({"website_id": website_id, "website_url": website_url, "error": str(e)})
+            errors.append({"website_id": website_id, "website_url": website_url, "error": str(e), "timestamp": datetime.now().isoformat()})
         count += 1
 # Write the errors to the error log file as JSON
 with open(error_log_path, mode='w') as error_file:
