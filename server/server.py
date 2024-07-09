@@ -4,10 +4,13 @@ import datetime
 from html import escape
 import json
 import os
-
+import traceback
 import http.server
 import urllib.parse as urlparse
 
+# Ensure the directory exists
+log_directory = "/home/scripts/log/server"
+os.makedirs(log_directory, exist_ok=True)
 
 def get_ipv6_address():
     # Get the host name
@@ -23,9 +26,9 @@ def get_ipv6_address():
 def create_log_files():
     hostname = socket.gethostname()
     current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
-    log_filename = f"{hostname}-{current_datetime}-server.log"
-    json_filename = f"{hostname}-{current_datetime}-server.json"
-    errors_filename = f"{hostname}-{current_datetime}-errors.log"
+    log_filename = f"{log_directory}/{hostname}-{current_datetime}-server.log"
+    json_filename = f"{log_directory}/{hostname}-{current_datetime}-server.json"
+    errors_filename = f"{log_directory}/{hostname}-{current_datetime}-errors.log"
 
     if not os.path.exists(log_filename):
         with open(log_filename, 'w') as file:
@@ -54,7 +57,7 @@ def write_server_log(condition):
 
     hostname = socket.gethostname()
     current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
-    filename = f"{hostname}-{current_datetime}-server.log"
+    filename = f"{log_directory}/{hostname}-{current_datetime}-server.log"
     with open(filename, 'r+') as file:
         logs = json.load(file)
         logs.append(log_message)
@@ -69,11 +72,12 @@ def log_error(error_message):
     log_message = {
         "Event": "Error",
         "Timestamp": str(timestamp),
-        "Error Message": error_message
+        "Error Message": error_message,
+        "Line": traceback.format_exc().splitlines()[-1]
     }
     hostname = socket.gethostname()
     current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
-    filename = f"{hostname}-{current_datetime}-errors.log"
+    filename = f"{log_directory}/{hostname}-{current_datetime}-errors.log"
     with open(filename, 'r+') as file:
         logs = json.load(file)
         logs.append(log_message)
@@ -101,7 +105,7 @@ def log_attempt(self, username, password, method, status_code, user_agent, desti
 
     hostname = socket.gethostname()
     current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
-    filename = f"{hostname}-{current_datetime}-server.json"
+    filename = f"{log_directory}/{hostname}-{current_datetime}-server.json"
     with open(filename, 'r+') as file:
         logs = json.load(file)
         logs.append(log_message)
@@ -175,3 +179,4 @@ if __name__ == '__main__':
         print('Server stopped')
     except Exception as e:
         log_error(str(e))
+
