@@ -28,7 +28,7 @@ def get_ipv6_address():
 
 def create_log_files():
     hostname = socket.gethostname()
-    current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
+    current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     log_filename = f"{log_directory}/{hostname}-{current_datetime}-serverHTTPS.log"
     json_filename = f"{log_directory}/{hostname}-{current_datetime}-serverHTTPS.json"
     errors_filename = f"{log_directory}/{hostname}-{current_datetime}-errorsHTTPS.log"
@@ -59,7 +59,7 @@ def write_server_log(condition):
     }
 
     hostname = socket.gethostname()
-    current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
+    current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     filename = f"{log_directory}/{hostname}-{current_datetime}-serverHTTPS.log"
     with open(filename, 'r+') as file:
         logs = json.load(file)
@@ -78,7 +78,7 @@ def log_error(error_message):
         "Error Line": traceback.format_exc()
     }
     hostname = socket.gethostname()
-    current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
+    current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     filename = f"{log_directory}/{hostname}-{current_datetime}-errorsHTTPS.log"
     with open(filename, 'r+') as file:
         logs = json.load(file)
@@ -108,7 +108,7 @@ def log_attempt(self, username, password, method, status_code, user_agent):
     
 
     hostname = socket.gethostname()
-    current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
+    current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     filename = f"{log_directory}/{hostname}-{current_datetime}-serverHTTPS.json"
     with open(filename, 'r+') as file:
         logs = json.load(file)
