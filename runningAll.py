@@ -39,6 +39,9 @@ def start_cowrie(status, service):
     os.system(f'cd /home/cowrie/{service} && sudo su cowrie ./bin/{service} {status}')
     logging.info(f'Started {service} with status: {status}')
 
+def copy_cowrie():
+    os.system('cd /home/ubuntu/trigona/cowrie && ./copy-cowrie.sh')
+
 
 def generate_number():
     return random.randint(2, 12*58)
@@ -50,9 +53,10 @@ if __name__ == '__main__':
     sleep(1)
     start_service('start', 'serverHTTPS', 1)
     sleep(1)
-    start_cowrie('start', 'cowrie')
+    start_cowrie('start', 'cowrie', 1)
     sleep(1)
-
+    copy_cowrie()
+    sleep(1)
 
     if ('crawler' in socket.gethostname()):
         start_service('start', 'crawler', generate_number())
