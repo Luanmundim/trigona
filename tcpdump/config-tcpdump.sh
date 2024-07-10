@@ -2,7 +2,10 @@
 
 # Function to start the tcpdump
 check_log_file() {
-    log_file="`hostname`-`date +"%Y%m%d"`-tcpdump-service.log"
+    log_dir="/home/ubuntu/log/tcpdump"
+    # Ensure the directory exists
+    mkdir -p "$log_dir"
+    log_file="$log_dir/$(hostname)-$(date +"%Y%m%d")-tcpdump-service.log"
     if [ ! -f "$log_file" ]; then
         touch "$log_file"
     fi
@@ -18,7 +21,7 @@ start_tcpdump() {
     echo "tcpdump started."
 
     # Create log entry
-    log_file="`hostname`-`date +"%Y%m%d"`-tcpdump-service.log"
+    check_log_file
     echo "$(date +"%Y-%m-%d %H:%M:%S") - tcpdump started" | jq -Rn --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S")" --arg message "tcpdump started" '{"timestamp": $timestamp, "message": $message}' >> "$log_file"
 }
 # Function to stop the tcpdump
@@ -33,7 +36,7 @@ stop_tcpdump() {
         echo "tcpdump stopped."
 
         # Create log entry
-        log_file="`hostname`-`date +"%Y%m%d"`-tcpdump-service.log"
+        check_log_file
 
         echo "$(date +"%Y-%m-%d %H:%M:%S") - tcpdump stopped" | jq -Rn --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S")" --arg message "tcpdump stopped" '{"timestamp": $timestamp, "message": $message}' >> "$log_file"
 
@@ -51,12 +54,12 @@ status_tcpdump() {
         # Check if the process is running
         echo "tcpdump is running with PID: $PID"
         # Create log entry
-        log_file="`hostname`-`date +"%Y%m%d"`-tcpdump-service.log"
+        check_log_file
         echo "$(date +"%Y-%m-%d %H:%M:%S") - tcpdump is running with PID: $PID" >> "$log_file"
     else
         echo "tcpdump is not running"
         # Create log entry
-        log_file="`hostname`-`date +"%Y%m%d"`-tcpdump-service.log"
+        check_log_file
         echo "$(date +"%Y-%m-%d %H:%M:%S") - tcpdump is not running" >> "$log_file"
     fi
 }
