@@ -5,7 +5,10 @@ SERVER_SCRIPT="request.py"
 
 # Function to start the request
 check_log_file() {
-    log_file="`hostname`-`date +"%Y%m%d"`-request-service.log"
+    log_dir="/home/ubuntu/log/request"
+    # Ensure the directory exists
+    mkdir -p "$log_dir"
+    log_file="$log_dir/$(hostname)-$(date +"%Y%m%d")-request-service.log"
     if [ ! -f "$log_file" ]; then
         touch "$log_file"
     fi
@@ -29,7 +32,7 @@ start_request() {
     echo "request started."
 
     # Create log entry
-    log_file="`hostname`-`date +"%Y%m%d"`-request-service.log"
+    check_log_file
     echo "$(date +"%Y-%m-%d %H:%M:%S") - request started" | jq -Rn --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S")" --arg message "request started" '{"timestamp": $timestamp, "message": $message}' >> "$log_file"
 }
 
@@ -46,7 +49,7 @@ stop_request() {
         echo "request stopped."
 
         # Create log entry
-        log_file="`hostname`-`date +"%Y%m%d"`-request-service.log"
+        check_log_file
 
         echo "$(date +"%Y-%m-%d %H:%M:%S") - request stopped" | jq -Rn --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S")" --arg message "request stopped" '{"timestamp": $timestamp, "message": $message}' >> "$log_file"
 
@@ -65,12 +68,12 @@ status_request() {
         if ps -p $PID > /dev/null; then
             echo "request is running with PID: $PID"
             # Create log entry
-            log_file="`hostname`-`date +"%Y%m%d"`-request-service.log"
+            check_log_file
             echo "$(date +"%Y-%m-%d %H:%M:%S") - request is running with PID: $PID" >> "$log_file" | jq -Rn '[inputs | split(" - ") | {"timestamp": .[0], "message": .[1]}]' "$log_file" > "$log_file"
         else
             echo "request is not running"
             # Create log entry
-            log_file="`hostname`-`date +"%Y%m%d"`-request-service.log"
+            check_log_file
             echo "$(date +"%Y-%m-%d %H:%M:%S") - request is not running" >> "$log_file" | jq -Rn '[inputs | split(" - ") | {"timestamp": .[0], "message": .[1]}]' "$log_file" > "$log_file"
         fi
     else
