@@ -40,7 +40,7 @@ def start_cowrie(status, service):
     logging.info(f'Started {service} with status: {status}')
 
 def copy_cowrie():
-    os.system('cd /home/ubuntu/trigona/cowrie && ./copy-cowrie.sh')
+    os.system('cd /home/ubuntu/trigona/cowrie && ./cowrie-copy.sh')
 
 
 def generate_number():
