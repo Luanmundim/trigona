@@ -5,7 +5,10 @@ SERVER_SCRIPT="crawler.py"
 
 # Function to start the crawler
 check_log_file() {
-    log_file="`hostname`-`date +"%Y%m%d"`-crawler-service.log"
+    log_dir="/home/ubuntu/log/crawler"
+    # Ensure the directory exists
+    mkdir -p "$log_dir"
+    log_file="$log_dir/$(hostname)-$(date +"%Y%m%d")-crawler-service.log"
     if [ ! -f "$log_file" ]; then
         touch "$log_file"
     fi
@@ -29,7 +32,7 @@ start_crawler() {
     echo "crawler started."
 
     # Create log entry
-    log_file="`hostname`-`date +"%Y%m%d"`-crawler-service.log"
+    check_log_file
     echo "$(date +"%Y-%m-%d %H:%M:%S") - crawler started" | jq -Rn --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S")" --arg message "crawler started" '{"timestamp": $timestamp, "message": $message}' >> "$log_file"
 }
 
@@ -46,7 +49,7 @@ stop_crawler() {
         echo "crawler stopped."
 
         # Create log entry
-        log_file="`hostname`-`date +"%Y%m%d"`-crawler-service.log"
+        check_log_file
 
         echo "$(date +"%Y-%m-%d %H:%M:%S") - crawler stopped" | jq -Rn --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S")" --arg message "crawler stopped" '{"timestamp": $timestamp, "message": $message}' >> "$log_file"
 
@@ -65,12 +68,12 @@ status_crawler() {
         if ps -p $PID > /dev/null; then
             echo "crawler is running with PID: $PID"
             # Create log entry
-            log_file="`hostname`-`date +"%Y%m%d"`-crawler-service.log"
+            check_log_file
             echo "$(date +"%Y-%m-%d %H:%M:%S") - crawler is running with PID: $PID" >> "$log_file" | jq -Rn '[inputs | split(" - ") | {"timestamp": .[0], "message": .[1]}]' "$log_file" > "$log_file"
         else
             echo "crawler is not running"
             # Create log entry
-            log_file="`hostname`-`date +"%Y%m%d"`-crawler-service.log"
+            check_log_file
             echo "$(date +"%Y-%m-%d %H:%M:%S") - crawler is not running" >> "$log_file" | jq -Rn '[inputs | split(" - ") | {"timestamp": .[0], "message": .[1]}]' "$log_file" > "$log_file"
         fi
     else
