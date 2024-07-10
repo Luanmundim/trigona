@@ -53,7 +53,7 @@ if __name__ == '__main__':
     sleep(1)
     start_service('start', 'serverHTTPS', 1)
     sleep(1)
-    start_cowrie('start', 'cowrie', 1)
+    start_cowrie('start', 'cowrie')
     sleep(1)
     copy_cowrie()
     sleep(1)
