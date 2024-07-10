@@ -5,5 +5,5 @@
 mkdir -p /home/ubuntu/log/cowrie
 
 # Move the files
-cp -r /home/cowrie/cowrie/var/log/cowrie /home/ubuntu/log/cowrie/cowrie-$(date '+%Y-%m-%d_%H-%M')
+cp -r /home/cowrie/cowrie/var/log/cowrie /home/ubuntu/log/cowrie/cowrie-$(date '+%Y-%m-%d_%H-%M-%S')
 
