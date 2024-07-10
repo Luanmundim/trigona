@@ -9,7 +9,7 @@ check_log_file() {
     log_dir="/home/ubuntu/log/server"
     # Ensure the directory exists
     mkdir -p "$log_dir"
-    log_file="$log_dir/$(hostname)-$(date +"%Y%m%d")-server-service.log"
+    log_file="$log_dir/$(hostname)-$(date +"%Y%m%d%H%M%S")-server-service.log"
     if [ ! -f "$log_file" ]; then
         touch "$log_file"
     fi
