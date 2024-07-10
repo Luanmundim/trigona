@@ -6,7 +6,10 @@ SERVER_PORT=4443
 
 # Function to start the server
 check_log_file() {
-    log_file="`hostname`-`date +"%Y%m%d"`-server-service.log"
+    log_dir="/home/ubuntu/log/serverHTTPS"
+    # Ensure the directory exists
+    mkdir -p "$log_dir"
+    log_file="$log_dir/$(hostname)-$(date +"%Y%m%d")-serverHTTPS-service.log"
     if [ ! -f "$log_file" ]; then
         touch "$log_file"
     fi
@@ -30,7 +33,7 @@ start_server() {
     echo "Server started."
 
     # Create log entry
-    log_file="`hostname`-`date +"%Y%m%d"`-server-service.log"
+    check_log_file()
     echo "$(date +"%Y-%m-%d %H:%M:%S") - Server started" | jq -Rn --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S")" --arg message "Server started" '{"timestamp": $timestamp, "message": $message}' >> "$log_file"
 }
 
@@ -47,7 +50,7 @@ stop_server() {
             echo "Server stopped."
 
             # Create log entry
-            log_file="`hostname`-`date +"%Y%m%d"`-server-service.log"
+            check_log_file()
 
             echo "$(date +"%Y-%m-%d %H:%M:%S") - Server stopped" | jq -Rn --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S")" --arg message "Server stopped" '{"timestamp": $timestamp, "message": $message}' >> "$log_file"
 
@@ -70,12 +73,12 @@ status_server() {
         if lsof -i :$SERVER_PORT -t -sTCP:LISTEN | grep -q $PID; then
             echo "Server is running with PID: $PID"
             # Create log entry
-            log_file="`hostname`-`date +"%Y%m%d"`-server-service.log"
+            check_log_file()
             echo "$(date +"%Y-%m-%d %H:%M:%S") - Server is running with PID: $PID" >> "$log_file" | jq -Rn '[inputs | split(" - ") | {"timestamp": .[0], "message": .[1]}]' "$log_file" > "$log_file"
         else
             echo "Server is not running"
             # Create log entry
-            log_file="`hostname`-`date +"%Y%m%d"`-server-service.log"
+            check_log_file()
 
             echo "$(date +"%Y-%m-%d %H:%M:%S") - Server is not running" >> "$log_file" | jq -Rn '[inputs | split(" - ") | {"timestamp": .[0], "message": .[1]}]' "$log_file" > "$log_file"
         fi
