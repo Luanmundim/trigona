@@ -4,28 +4,42 @@ import subprocess
 import paramiko
 from scp import SCPClient
 import datetime
+import re
+import ipaddress
 
 #scp -P 5000 -i ~/.ssh/id_rsa /home/ubuntu/Desktop/maintrigona.py ubuntu@34.44.250.143:/home/ubuntu/maintrigona.py
 # ssh -p 5000 -i ~/.ssh/id_rsa 34.44.250.143
 #gcloud compute scp --port=5000 --zone=us-central1-a --recurse /home/ubuntu/ us-central1-ipv6-instances-0:/home/ubuntu/
 
-ip = '193.19.205.98'
+ip = '181.214.151.65'
 
 # List of regions
-'''#regions = ['us-west2', 'southamerica-east1', 'europe-west3', 'me-west1', 'asia-east2']'''
+'''#regions = ['us-west1', 'southamerica-east1', 'europe-west1', 'me-west1', 'asia-east1']'''
 regions = ['us-central1']
 
 #List of clusters and the number it will have in each region(subnet)
 '''#clusters = {
 #    'ipv6-control': 1,
-#    'ipv6-requests': 2,
+#    'ipv6-crawler': 2,
 #    'ipv6-dns': 2,
-#    'ipv6-lan': 1,
-#    'ipv4-instances': 1
+#    'ipv6-requests': 2
 #}'''
-clusters = {'ipv6-requests': 2}
+clusters = {'ipv6-crawler': 2, 'ipv6-requests': 2}
 
-networks = ['net-trigona-ipv4', 'net-trigona-ipv6']
+networks = ['network-trigona']
+
+def increment_ipv6(ipv6_address):
+    # Convert the IPv6 address to a 128-bit integer
+    address_int = int(ipaddress.IPv6Address(ipv6_address))
+    
+    # Increment the address by 1
+    incremented_address_int = address_int + 1
+    
+    # Convert back to IPv6 address format
+    incremented_address = ipaddress.IPv6Address(incremented_address_int)
+    
+    return str(incremented_address)
+
 
 # Function to configure the initial setup
 def createInitConfig():
@@ -101,9 +115,9 @@ def checkFirewall():
 
 
 def createInstances():
-    createNetwork()
-    createSubnets()
-    createFirewallRules()
+    #createNetwork()
+    #createSubnets()
+    #createFirewallRules()
     try:
         for region in regions:
             print(f"Creating instances in region {region}")
@@ -111,37 +125,21 @@ def createInstances():
                 print(f"Creating instances in cluster {region}-{cluster}")
                 for i in range(count):
                     instance_name = f"{region}-{cluster}-{i}"
-                    if cluster =='ipv4-instances':
-                        print(f"Creating instance {instance_name}")
-                        os.system(f'''
-                            gcloud compute instances create {instance_name} \
-                            --zone={region}-a \
-                            --machine-type=e2-small \
-                            --image=debian-11-bullseye-v20230912 \
-                            --image-project=debian-cloud \
-                            --boot-disk-size=20 \
-                            --subnet={region}-{cluster}-{networks[0]} \
-                            --stack-type=IPV4_IPV6
+                    print(f"Creating instance {instance_name}")
+                    os.system(f'''
+                        gcloud compute instances create {instance_name} \
+                        --zone={region}-a \
+                        --machine-type=e2-small \
+                        --image=debian-11-bullseye-v20231113 \
+                        --image-project=debian-cloud \
+                        --boot-disk-size=30 \
+                        --subnet={region}-{cluster}-{networks[0]} \
+                        --stack-type=IPV4_IPV6
                         ''')
-                    
-                    else:
-                        print(f"Creating instance {instance_name}")
-                        os.system(f'''
-                            gcloud compute instances create {instance_name} \
-                            --zone={region}-a \
-                            --machine-type=e2-small \
-                            --image=debian-11-bullseye-v20230912 \
-                            --image-project=debian-cloud \
-                            --boot-disk-size=20 \
-                            --subnet={region}-{cluster}-{networks[1]} \
-                            --stack-type=IPV4_IPV6
-                        ''')
-                    
+
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         return
-
-
 
 #Function to create a network
 def createNetwork():
@@ -165,10 +163,11 @@ def createSubnets():
                 print(f"Creating subnets for cluster {cluster}")
                 for network in networks:
                     print(f"Creating subnet for network {network}")
+                    random_number = random.randint(0, 255)
                     os.system(f'''
                     gcloud compute networks subnets create {region}-{cluster}-{network} \
                     --network={network} \
-                    --range=10.0.0.0/20 \
+                    --range=10.{random_number}.0.0/20 \
                     --stack-type=IPV4_IPV6 \
                     --ipv6-access-type=EXTERNAL \
                     --region={region}
@@ -180,32 +179,24 @@ def createSubnets():
 def createFirewallRules():
     try:
         print("Creating firewall rules")
+
+        os.system(f'''
+        gcloud compute firewall-rules create {networks[0]}-allow-ipv6\
+        --network {networks[0]} \
+        --priority 1000 \
+        --direction ingress \
+        --action allow \
+        --rules=tcp \
+        --source-ranges 0::/0''')
+
         os.system(f'''
         gcloud compute firewall-rules create {networks[0]}-allow-ipv4\
         --network {networks[0]}\
         --priority 1000 \
         --direction ingress \
         --action allow \
-        --rules=tcp:22,tcp:80,tcp:443,tcp:5432,tcp:161,tcp:110,tcp:23,tcp:5000 \
+        --rules=tcp:2222,22 \
         --source-ranges 0.0.0.0/0''')
-
-        os.system(f'''
-        gcloud compute firewall-rules create {networks[1]}-allow-ipv6\
-        --network {networks[1]} \
-        --priority 1000 \
-        --direction ingress \
-        --action allow \
-        --rules=tcp:22,tcp:80,tcp:443,tcp:5432,tcp:161,tcp:110,tcp:23 \
-        --source-ranges 0::/0''')
-
-        os.system(f'''
-        gcloud compute firewall-rules create {networks[1]}-allow-ipv4\
-        --network {networks[1]}\
-        --priority 1000 \
-        --direction ingress \
-        --action allow \
-        --rules=tcp:2222 \
-        --source-ranges {ip}''')
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
@@ -217,34 +208,57 @@ def configureInstance():
         instances, zones = getInstances()
         for instanceName, zone in zip(instances, zones):
             print(f"Configuring instance {instanceName}")
-            '''os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get remove --purge man-db -y'")#consume too much time in the update process
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get remove --purge man-db -y'")#consume too much time in the update process
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get update -y'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get upgrade -y'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo sed -i '/^#Port 22/c\Port 5000' /etc/ssh/sshd_config && sudo systemctl restart sshd'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get install python3-dnspython -y'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt install at -y'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt install lsof'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt install jq -y'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get install python3-venv -y'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get install git python3-virtualenv libssl-dev libffi-dev build-essential libpython3-dev python3-minimal authbind virtualenv -y'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu && git clone https://github.com/Luanmundim/trigona'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/DNS/ && chmod +x config-DNS.sh'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/crawler/ && chmod +x config-crawler.sh'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/tcpdump/ && chmod +x config-tcpdump.sh'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/server/ && chmod +x config-server.sh'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/serverHTTPS/ && chmod +x config-serverHTTPS.sh'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/request && chmod +x config-request.sh'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/cowrie && chmod +x copy-cowrie.sh'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/serverHTTPS && openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -passout pass:adminluan -subj \"/C=US/ST=State/L=City/O=Organization/OU=Organizational Unit/CN=Common Name/emailAddress=email@example.com\"'")
+            #os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='context.load_cert_chain(certfile=\"cert.pem\", keyfile=\"key.pem\", cafile=\"ca-cert.pem\")'")
 
-            os.system(f'gcloud compute ssh {instanceName} --zone={zone} --ssh-flag="-p 5000" --command="sudo apt-get install docker.io -y"')
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo adduser --disabled-password --gecos "" cowrie'") #testar commando
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo su - cowrie'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='git clone http://github.com/cowrie/cowrie'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd cowrie'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='python3 -m venv cowrie-env'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='source cowrie-env/bin/activate'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='python3 -m pip install --upgrade pip'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='python3 -m pip install --upgrade -r requirements.txt'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='wget https://raw.githubusercontent.com/Luanmundim/trigona/main/cowrie/cowrie.cfg && mv cowrie.cfg /home/cowrie/cowrie/etc/'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='deactivate'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='exit'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo iptables -t nat -A PREROUTING -p tcp --dport 2223 -j REDIRECT --to-port 23 && sudo ip6tables -t nat -A PREROUTING -p tcp --dport 2223 -j REDIRECT --to-port 23'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo iptables -t nat -A PREROUTING -p tcp --dport 23 -j REDIRECT --to-port 2223 && sudo ip6tables -t nat -A PREROUTING -p tcp --dport 23 -j REDIRECT --to-port 2223'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo ip6tables -t nat -A PREROUTING -p tcp --dport 8080 -j REDIRECT --to-port 80 && sudo ip6tables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo ip6tables -t nat -A PREROUTING -p tcp --dport 4443 -j REDIRECT --to-port 443 && sudo ip6tables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 4443'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo iptables -t nat -A PREROUTING -p tcp --dport 2222 -j REDIRECT --to-port 22 && sudo ip6tables -t nat -A PREROUTING -p tcp --dport 2222 -j REDIRECT --to-port 22'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --ssh-flag='-p 2222' --command='sudo iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222 && sudo ip6tables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222'")
 
-            os.system(f'gcloud compute ssh {instanceName} --zone={zone} --ssh-flag="-p 5000" --command="sudo docker pull luantmundim/trigona:2.0"')'''
-
-            os.system (f'gcloud compute ssh {instanceName} --zone={zone} --ssh-flag="-p 5000" --command="sudo docker run -d -t -p [::]:23:2223 -p [::]:22:2222 -p [::]:110:110 -p [::]:143:143 -p [::]:161:161 -p [::]:443:443 -p [::]:5432:5432 -p [::]:80:80 --hostname {instanceName} --name trigona luantmundim/trigona:2.0"')
-
-            #os.system(f'gcloud compute ssh {instanceName} --zone={zone} --ssh-flag="-p 5000" --command="sudo docker stop trigona"')
             
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         return
 
-def modifyservices(command):
+def startTrigonaReal():
+    print("Starting Trigona")
     try:
         instances, zones = getInstances()
         for instanceName, zone in zip(instances, zones):
             print(f"Starting instance {instanceName}")
-            os.system(f'gcloud compute ssh {instanceName} --zone="{zone}" --ssh-flag="-p 5000" --command="sudo docker {command} trigona"')
-            os.system(f'gcloud compute ssh {instanceName} --zone={zone} --ssh-flag="-p 5000" --command="sudo docker exec --user cowrie trigona /home/cowrie/cowrie/bin/cowrie {command}"')
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --ssh-flag='-p 2222' --command='echo \"0 0,12 * * * /usr/bin/python3 /home/ubuntu/trigona/runningAll.py\" | crontab -'")
 
-            os.system(f'gcloud compute ssh {instanceName} --zone={zone} --ssh-flag="-p 5000" --command="sudo docker exec trigona /bin/bash -c "cd /home/scripts/qeeqbox/ && ./screen-qeeqbox-{command}.sh""')
-
-            os.system(f'gcloud compute ssh {instanceName} --zone={zone} --ssh-flag="-p 5000" --command="sudo docker exec trigona /bin/bash -c "cd /home/scripts/tcpdump/ && ./screen-tcpdump-{command}.sh""')
             
     except Exception as e:
         print(f"An error occurred: {str(e)}")
@@ -255,8 +269,17 @@ def modifyTrigona(command):
     try:
         instances, zones = getInstances()
         for instanceName, zone in zip(instances, zones):
-            print(f"Starting instance {instanceName}")
-            os.system(f'gcloud compute ssh {instanceName} --zone="{zone}" --ssh-flag="-p 5000" --command="sudo docker {command} trigona"')
+            print(f"Checking {instanceName}")
+            print('Checking the status of the DNS: ')
+            os.system(f'gcloud compute ssh {instanceName} --zone="{zone}" --ssh-flag="-p 2222" --command="cd /home/ubuntu/trigona/DNS && ./config-DNS.sh {command}"')
+            print('Checking the status of the crawler: ')
+            os.system(f'gcloud compute ssh {instanceName} --zone="{zone}" --ssh-flag="-p 2222" --command="cd /home/ubuntu/trigona/crawler && ./config-crawler.sh {command}"')
+            print('Checking the status of the server: ')
+            os.system(f'gcloud compute ssh {instanceName} --zone="{zone}" --ssh-flag="-p 2222" --command="cd /home/ubuntu/trigona/server && ./config-server.sh {command}"')
+            print('Checking the status of the serverHTTPS: ')
+            os.system(f'gcloud compute ssh {instanceName} --zone="{zone}" --ssh-flag="-p 2222" --command="cd /home/ubuntu/trigona/serverHTTPS && ./config-serverHTTPS.sh {command}"')
+            print('Checking the status of the cowrie: ')
+            os.system(f'gcloud compute ssh {instanceName} --zone="{zone}" --ssh-flag="-p 2222" --command="/home/cowrie/cowrie/bin/cowrie {command}"')
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
@@ -285,33 +308,25 @@ def updateFirewallRules():
     os.system(f'gcloud compute firewall-rules update {rule_name} --source-ranges {ipv4_address}')
 
 
-def updateCrontab():
-    try:
-        instances, zones = getInstances()
-        for instanceName, zone in zip(instances, zones):
-            os.system(f'gcloud compute ssh {instanceName} --zone="{zone}" --ssh-flag="-p 5000" --command="(crontab -l 2>/dev/null; echo \"* * * * * ls > log.txt\") | crontab -"')
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-        return
-
 def stopCrontab():
     try:
         instances, zones = getInstances()
         for instanceName, zone in zip(instances, zones):
-            os.system(f'gcloud compute ssh {instanceName} --zone={zone} --ssh-flag="-p 5000" --command="(crontab -l 2>/dev/null | sed \'s/^/#/\') | crontab -"')
+            print(f"Stopping crontab for instance {instanceName}")
+            os.system(f'gcloud compute ssh {instanceName} --zone={zone} --ssh-flag="-p 2222" --command="crontab -r"')
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         return
 
-def scpToInstances():
+def colectLogs():
     instances, zones = getInstances()
     current_datetime = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_directory = f"log-{instance}-{current_datetime}"
-    os.makedirs(log_directory)
     for instance, zone in zip(instances, zones):
+        log_directory = f"log-{instance}-{current_datetime}"
+        os.makedirs(log_directory)
         ipv4_address = subprocess.Popen(f"gcloud compute instances describe {instance} --zone={zone} --format='value(networkInterfaces[0].accessConfigs[0].natIP)'", shell=True, stdout=subprocess.PIPE).stdout
         ipv4_address = ipv4_address.read().decode().strip()
-        os.system(f'scp -r -P 5000 -i ~/.ssh/id_rsa -o "StrictHostKeyChecking=no" ubuntu@{ipv4_address}:/home/ubuntu /home/ubuntu/Desktop/mestrado/log/{log_directory}')
+        os.system(f'scp -r -P 2222 -i ~/.ssh/id_rsa -o "StrictHostKeyChecking=no" ubuntu@{ipv4_address}:/home/ubuntu/log /home/ubuntu/Desktop/mestrado/log/{log_directory}')
 
 def sendoFilestoInstance():
     instances, zones = getInstances()
@@ -321,7 +336,7 @@ def sendoFilestoInstance():
     for instance, zone in zip(instances, zones):
         ipv4_address = subprocess.Popen(f"gcloud compute instances describe {instance} --zone={zone} --format='value(networkInterfaces[0].accessConfigs[0].natIP)'", shell=True, stdout=subprocess.PIPE).stdout
         ipv4_address = ipv4_address.read().decode().strip()
-        os.system(f'scp -r -P 5000 -i ~/.ssh/id_rsa -o "StrictHostKeyChecking=no" //home/ubuntu/Desktop/mestrado/trigonadocker ubuntu@{ipv4_address}:/home/ubuntu')
+        os.system(f'scp -r -P 5000 -i ~/.ssh/id_rsa -o "StrictHostKeyChecking=no" /home/ubuntu/Desktop/mestrado/trigonadocker ubuntu@{ipv4_address}:/home/ubuntu')
 
 def wgetIpv6Lan():
     instances, zones = getInstances()
@@ -331,7 +346,7 @@ def wgetIpv6Lan():
 
 #Function to open the main menu
 def run():
-    print("\nWelcome to Trigona!\n Here we are going to have some fun discovering the wonderful world of clouds and honey!!\n" + 
+    print("\nWelcome to Trigona!\n Here we are going to have some fun discovering the wonderfull world of clouds and honey!!\n" + 
     "\n1. Create initial configuration" +
     "\n2. List the instances" +
     "\n3. List the networks" +
@@ -341,13 +356,12 @@ def run():
     "\n7. Configure Instances"
     "\n8. Configure firewall rules for IPv4 address"
     "\n9. SSH to an instance"
-    "\n10. Modify Trigona (start|stop)"
-    "\n11. Modify services (start|stop)"
+    "\n10. Modify Trigona (start|start|stop)"
+    "\n11. Start Trigona"
     "\n12. Update firewall rules for IPv4 address"
     "\n13. Generate and send SSH keys to gcloud"
-    "\n14. Update crontab for all instances"
     "\n15. Stop crontab for all instances"
-    "\n16. SCP to instances"
+    "\n16. Colect Logs from instances"
     "\n17. send files to instances"
     "\n99. Delete an instance" +
     "\n100. Exit\n"
@@ -374,19 +388,17 @@ def run():
         elif option == 9:
             connectToInstance()
         elif option == 10:
-            modifyTrigona(input("Type the command to start or stop the Trigona container (start|stop): "))
+            modifyTrigona(input("Type the command to start or stop the Trigona container (start|status|stop): "))
         elif option == 11:
-            modifyservices(input("Type the command to start or stop the services (start|stop): "))
+            startTrigonaReal()
         elif option == 12:
             updateFirewallRules()
         elif option == 13:
             generateAndSendSSHKeys()
-        elif option == 14:
-            updateCrontab()
         elif option == 15:
             stopCrontab()
         elif option == 16:
-            scpToInstances()
+            colectLogs()
         elif option == 17:
             sendoFilestoInstance()
         elif option == 99:
@@ -402,16 +414,3 @@ def run():
 
 if __name__ == "__main__":
     run()
-
-
-'''command = 'docker ps -a'
-getInstances =  subprocess.Popen("gcloud compute instances list | awk '{print $1}' | grep -v 'NAME'", shell=True, stdout=subprocess.PIPE).stdout
-instances = getInstances.read().decode().split('\n')
-instances.pop()
-for i, instance in enumerate(instances):
-    print(f"{i+1}. {instance}")
-    zone = subprocess.Popen(f"gcloud compute instances list --filter=name={instance} --format='value(zone)'", shell=True, stdout=subprocess.PIPE).stdout
-    zone = zone.read().decode().strip()
-    if zone is not None:
-        print(f"{i+1}. {instance} ({zone})")
-        os.system(f'echo adminluan | gcloud compute ssh {instance} --zone="{zone}" --ssh-flag="-p 5000" --command="{command}"')'''
