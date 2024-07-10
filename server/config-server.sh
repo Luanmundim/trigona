@@ -33,7 +33,7 @@ start_server() {
     echo "Server started."
 
     # Create log entry
-    check_log_file()
+    check_log_file
     echo "$(date +"%Y-%m-%d %H:%M:%S") - Server started" | jq -Rn --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S")" --arg message "Server started" '{"timestamp": $timestamp, "message": $message}' >> "$log_file"
 }
 
@@ -50,7 +50,7 @@ stop_server() {
             echo "Server stopped."
 
             # Create log entry
-            check_log_file()
+            check_log_file
 
             echo "$(date +"%Y-%m-%d %H:%M:%S") - Server stopped" | jq -Rn --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S")" --arg message "Server stopped" '{"timestamp": $timestamp, "message": $message}' >> "$log_file"
 
@@ -73,12 +73,12 @@ status_server() {
         if lsof -i :$SERVER_PORT -t -sTCP:LISTEN | grep -q $PID; then
             echo "Server is running with PID: $PID"
             # Create log entry
-            check_log_file()
+            check_log_file
             echo "$(date +"%Y-%m-%d %H:%M:%S") - Server is running with PID: $PID" >> "$log_file" | jq -Rn '[inputs | split(" - ") | {"timestamp": .[0], "message": .[1]}]' "$log_file" > "$log_file"
         else
             echo "Server is not running"
             # Create log entry
-            check_log_file()
+            check_log_file
 
             echo "$(date +"%Y-%m-%d %H:%M:%S") - Server is not running" >> "$log_file" | jq -Rn '[inputs | split(" - ") | {"timestamp": .[0], "message": .[1]}]' "$log_file" > "$log_file"
         fi
