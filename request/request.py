@@ -1,21 +1,11 @@
 import requests
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.connection import allowed_gai_family
 import csv
 import time
 import socket
 import json
 from datetime import datetime
 import os
-
-# Custom function to force the use of IPv6
-def force_ipv6():
-    def _allowed_gai_family():
-        """
-        Use AF_INET6 address family (IPv6) for name resolution.
-        """
-        return socket.AF_INET6
-    allowed_gai_family = _allowed_gai_family
 
 # Get the hostname of the machine
 hostname = socket.gethostname()
@@ -46,9 +36,6 @@ def ensure_scheme(url):
         return 'https://' + url
     return url
 
-# Force the use of IPv6
-force_ipv6()
-
 # Create a session and mount a custom adapter
 session = requests.Session()
 adapter = HTTPAdapter()
@@ -63,17 +50,16 @@ with open(input_csv_path, mode='r') as csv_file:
     errors = []
     total_rows = len(csv_data)  # Use the converted list in len() function
     for row in csv_data:
-        website_id, website_url = row
-        website_url = ensure_scheme(website_url)
+        ipv6_address = row[1]
         try:
-            print(f"Processing {website_url} - {count} of {total_rows}...")
+            print(f"Processing {ipv6_address} - {count} of {total_rows}...")
             start_time = time.time()
-            response = session.get(website_url, timeout=2)  # Set the timeout to 2 seconds
+            response = session.get(f'http://[{ipv6_address}]', timeout=2)  # Set the timeout to 2 seconds
             response_time = time.time() - start_time
             # Include the host's IPv6 address and timestamp in the result
-            results.append({"website_id": website_id, "website_url": website_url, "status_code": response.status_code, "response_time": response_time, "origin_ipv6": host_ipv6, "timestamp": datetime.now().isoformat()})
+            results.append({"ipv6_address": ipv6_address, "status_code": response.status_code, "response_time": response_time, "origin_ipv6": host_ipv6, "timestamp": datetime.now().isoformat()})
         except requests.RequestException as e:
-            errors.append({"website_id": website_id, "website_url": website_url, "error": str(e), "timestamp": datetime.now().isoformat()})
+            errors.append({"ipv6_address": ipv6_address, "error": str(e), "timestamp": datetime.now().isoformat()})
         count += 1
 # Write the errors to the error log file as JSON
 with open(error_log_path, mode='w') as error_file:
