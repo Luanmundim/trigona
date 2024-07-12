@@ -1,126 +1,104 @@
-import socket
-import socketserver
-import datetime
-from html import escape
-import json
-import os
-import ssl
-import logging
-from logging.handlers import TimedRotatingFileHandler
+#!/bin/bash
 
-import http.server
-import urllib.parse as urlparse
+# Define the Python script to run
+SERVER_SCRIPT="serverHTTPS.py"
+SERVER_PORT=4443
 
-# Ensure the directory exists
-log_directory = "/home/ubuntu/log/serverHTTPS"
-os.makedirs(log_directory, exist_ok=True)
+# Function to start the server
+check_log_file() {
+    log_dir="/home/ubuntu/log/serverHTTPS"
+    # Ensure the directory exists
+    mkdir -p "$log_dir"
+    log_file="$log_dir/$(hostname)-$(date +"%Y%m%d%H%M%S")-serverHTTPS-service.log"
+    if [ ! -f "$log_file" ]; then
+        touch "$log_file"
+    fi
+}
 
-hostname = socket.gethostname()
-current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-log_filename = f"{log_directory}/{hostname}-serverHTTPS.log"
+start_server() {
+    echo "Starting server..."
+    # Check if the server is already running
+    if [ -f serverHTTPS.pid ]; then
+        PID=$(cat serverHTTPS.pid)
+        if lsof -i :$SERVER_PORT -t -sTCP:LISTEN | grep -q $PID; then
+            echo "Server is already running with PID: $PID"
+            return
+        fi
+    fi
 
-# Configure logging
-logger = logging.getLogger("serverHTTPS")
-logger.setLevel(logging.INFO)
+    # Run the Python script in the background
+    python3 $SERVER_SCRIPT &
+    # Save the process ID of the server
+    echo $! > serverHTTPS.pid
+    echo "Server started."
 
-# Create a rotating file handler
-handler = TimedRotatingFileHandler(log_filename, when="midnight", backupCount=30)
-handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-logger.addHandler(handler)
+    # Create log entry
+    check_log_file
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - Server started" | jq -Rn --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S")" --arg message "Server started" '{"timestamp": $timestamp, "message": $message}' >> "$log_file"
+}
 
-def get_ipv6_address():
-    # Get the host name
-    hostname = socket.gethostname()
-    # Fetch addresses associated with the host
-    addr_info = socket.getaddrinfo(hostname, None, socket.AF_INET6)
-    for address in addr_info:
-        # Extract the IPv6 address
-        ipv6_address = address[4][0]
-        return ipv6_address
+# Function to stop the server
+stop_server() {
+    echo "Stopping server..."
+    # Read the process ID from the file
+    if [ -f serverHTTPS.pid ]; then
+        PID=$(cat serverHTTPS.pid)
+        # Check if the process is running
+        if lsof -i :$SERVER_PORT -t -sTCP:LISTEN | grep -q $PID; then
+            kill $PID
+            rm serverHTTPS.pid
+            echo "Server stopped."
 
-def log_attempt(self, username, password, method, status_code, user_agent):
-    timestamp = datetime.datetime.now()
-    log_message = {
-        "Username": escape(username),
-        "Password": escape(password),
-        "Method": method,
-        "User-Agent": user_agent,
-        "Status Code": status_code,
-        "Origin IP": self.client_address[0],
-        "Destination IP": destinationIP,
-        "Origin Port": self.client_address[1],
-        "Destination Port": self.server.server_address[1],
-        "URL": self.path,
-        "Timestamp": str(timestamp)
-    }
-    logger.info(json.dumps(log_message))
+            # Create log entry
+            check_log_file
 
-class IPv6Server(socketserver.TCPServer):
-    address_family = socket.AF_INET6
+            echo "$(date +"%Y-%m-%d %H:%M:%S") - Server stopped" | jq -Rn --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S")" --arg message "Server stopped" '{"timestamp": $timestamp, "message": $message}' >> "$log_file"
 
-class MyHandler(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
-        try:
-            html = f"""
-            <html>
-            <body>
-                <form action="/" method="post">
-                    Username: <input name="username" type="text"><br>
-                    Password: <input name="password" type="password"><br>
-                    <input type="submit" value="Login">
-                </form>
-            </body>
-            </html>
-            """
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            self.wfile.write(html.encode('utf-8'))
-            user_agent = self.headers.get('User-Agent')
-            
-            log_attempt(self, '', '', 'GET', '200', user_agent)
-        except Exception as e:
-            logger.error(str(e))
-
-    def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length)
-        data = urlparse.parse_qs(post_data.decode('utf-8'))
-        username = data.get('username', [''])[0]
-        password = data.get('password', [''])[0]
+        else
         
-        message = "Incorrect username or password"
+            echo "Server is not running"
+        fi
+    else
+        echo "Server PID file not found. Is the server running?"
+    fi
+}
 
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        self.wfile.write(message.encode('utf-8'))
-        user_agent = self.headers.get('User-Agent')
-        status_code = '200'
+# Function to check the status of the server
+status_server() {
+    echo "Checking server status..."
+    # Read the process ID from the file
+    if [ -f serverHTTPS.pid ]; then
+        PID=$(cat serverHTTPS.pid)
+        # Check if the process is running
+        if lsof -i :$SERVER_PORT -t -sTCP:LISTEN | grep -q $PID; then
+            echo "Server is running with PID: $PID"
+            # Create log entry
+            check_log_file
+            echo "$(date +"%Y-%m-%d %H:%M:%S") - Server is running with PID: $PID" >> "$log_file" | jq -Rn '[inputs | split(" - ") | {"timestamp": .[0], "message": .[1]}]' "$log_file" > "$log_file"
+        else
+            echo "Server is not running"
+            # Create log entry
+            check_log_file
 
-        try:
-            log_attempt(self, username, password, 'POST', status_code, user_agent)
-        except Exception as e:
-            logger.error(str(e))
+            echo "$(date +"%Y-%m-%d %H:%M:%S") - Server is not running" >> "$log_file" | jq -Rn '[inputs | split(" - ") | {"timestamp": .[0], "message": .[1]}]' "$log_file" > "$log_file"
+        fi
+    else
+        echo "Server PID file not found. Is the server running?"
+    fi
+}
 
-if __name__ == '__main__':
-    try:
-        destinationIP = get_ipv6_address()
-        server_address = ('::', 4443)
-        httpd = IPv6Server(server_address, MyHandler)
-        
-        # Create an SSL context
-        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        context.load_cert_chain(certfile='cert.pem', keyfile='key.pem', password='adminluan')
-        
-        # Wrap the HTTP server in SSL using the SSL context
-        httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
-        
-        print(f'''Server running on https://[{destinationIP}]:4443''')
-        logger.info('Server starts')
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        logger.info('Server stops')
-        print('Server stopped')
-    except Exception as e:
-        logger.error(str(e))
+# Check command line argument
+case "$1" in
+    start)
+        start_server
+        ;;
+    stop)
+        stop_server
+        ;;
+    status)
+        status_server
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status}"
+        exit 1
+esac
