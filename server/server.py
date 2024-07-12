@@ -4,31 +4,29 @@ import datetime
 from html import escape
 import json
 import os
-import ssl
-import subprocess
 import traceback
 import logging
-from logging.handlers import RotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
 
 import http.server
 import urllib.parse as urlparse
 
 # Ensure the directory exists
-log_directory = "/home/ubuntu/log/serverHTTPS"
+log_directory = "/home/ubuntu/log/server"
 os.makedirs(log_directory, exist_ok=True)
 
 hostname = socket.gethostname()
-current_datetime = datetime.datetime.now().strftime("%Y-%m-%d")
-log_filename = f"{log_directory}/{hostname}-{current_datetime}-serverHTTPS.log"
+current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+log_filename = f"{log_directory}/{hostname}-server.log"
 
-# Configure logging
-logger = logging.getLogger("serverHTTPS")
+# Create a rotating log handler
+log_handler = TimedRotatingFileHandler(log_filename, when="midnight", interval=1, backupCount=30)
+log_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+# Create a logger and add the log handler
+logger = logging.getLogger()
+logger.addHandler(log_handler)
 logger.setLevel(logging.INFO)
-
-# Create a rotating file handler
-handler = RotatingFileHandler(log_filename, maxBytes=1024*1024, backupCount=5)
-handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-logger.addHandler(handler)
 
 def get_ipv6_address():
     # Get the host name
@@ -40,7 +38,7 @@ def get_ipv6_address():
         ipv6_address = address[4][0]
         return ipv6_address
 
-def log_attempt(self, username, password, method, status_code, user_agent):
+def log_attempt(self, username, password, method, status_code, user_agent, destinationIP):
     timestamp = datetime.datetime.now()
     log_message = {
         "Username": escape(username),
@@ -54,8 +52,9 @@ def log_attempt(self, username, password, method, status_code, user_agent):
         "Destination Port": self.server.server_address[1],
         "URL": self.path,
         "Timestamp": str(timestamp)
-    }
-    logger.info(json.dumps(log_message))
+    }  
+
+    logger.info(json.dumps(log_message, indent=4))
 
 class IPv6Server(socketserver.TCPServer):
     address_family = socket.AF_INET6
@@ -80,7 +79,7 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(html.encode('utf-8'))
             user_agent = self.headers.get('User-Agent')
             
-            log_attempt(self, '', '', 'GET', '200', user_agent)
+            log_attempt(self, '', '', 'GET', '200', user_agent, destinationIP)
         except Exception as e:
             logger.error(str(e))
 
@@ -101,28 +100,20 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
         status_code = '200'
 
         try:
-            log_attempt(self, username, password, 'POST', status_code, user_agent)
+            log_attempt(self, username, password, 'POST', status_code, user_agent, destinationIP)
         except Exception as e:
             logger.error(str(e))
 
 if __name__ == '__main__':
     try:
         destinationIP = get_ipv6_address()
-        server_address = ('::', 4443)
+        server_address = ('::', 8080)
         httpd = IPv6Server(server_address, MyHandler)
-        
-        # Create an SSL context
-        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        context.load_cert_chain(certfile='cert.pem', keyfile='key.pem', password='adminluan')
-        
-        # Wrap the HTTP server in SSL using the SSL context
-        httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
-        
-        print(f'''Server running on https://[{destinationIP}]:4443''')
-        logger.info('Server starts')
+        print(f'''Server running on http://[{destinationIP}]:8080''')
+        logger.info(f"Server starts at {datetime.datetime.now()}")
         httpd.serve_forever()
     except KeyboardInterrupt:
-        logger.info('Server stops')
+        logger.info(f"Server stops at {datetime.datetime.now()}")
         print('Server stopped')
     except Exception as e:
         logger.error(str(e))
