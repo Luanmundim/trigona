@@ -4,9 +4,9 @@ import datetime
 from html import escape
 import json
 import os
-import ssl
-import subprocess
 import traceback
+import logging
+from logging.handlers import TimedRotatingFileHandler
 
 import http.server
 import urllib.parse as urlparse
@@ -14,6 +14,19 @@ import urllib.parse as urlparse
 # Ensure the directory exists
 log_directory = "/home/ubuntu/log/serverHTTPS"
 os.makedirs(log_directory, exist_ok=True)
+
+hostname = socket.gethostname()
+current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+log_filename = f"{log_directory}/{hostname}-serverHTTPS.log"
+
+# Create a rotating log handler
+log_handler = TimedRotatingFileHandler(log_filename, when="midnight", interval=1, backupCount=30)
+log_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+# Create a logger and add the log handler
+logger = logging.getLogger()
+logger.addHandler(log_handler)
+logger.setLevel(logging.INFO)
 
 def get_ipv6_address():
     # Get the host name
@@ -25,72 +38,7 @@ def get_ipv6_address():
         ipv6_address = address[4][0]
         return ipv6_address
 
-
-def create_log_files():
-    hostname = socket.gethostname()
-    current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    log_filename = f"{log_directory}/{hostname}-{current_datetime}-serverHTTPS.log"
-    json_filename = f"{log_directory}/{hostname}-{current_datetime}-serverHTTPS.json"
-    errors_filename = f"{log_directory}/{hostname}-{current_datetime}-errorsHTTPS.log"
-
-    if not os.path.exists(log_filename):
-        with open(log_filename, 'w') as file:
-            json.dump([], file)
-        print(f"Log file {log_filename} created.")
-
-    if not os.path.exists(json_filename):
-        with open(json_filename, 'w') as file:
-            json.dump([], file)
-        print(f"JSON file {json_filename} created.")
-    
-    if not os.path.exists(errors_filename):
-        with open(errors_filename, 'w') as file:
-            json.dump([], file)
-        print(f"Errors file {errors_filename} created.")
-
-# Call the function before using the log_attempt and write_server_log functions
-
-
-def write_server_log(condition):
-    timestamp = datetime.datetime.now()
-    log_message = {
-        "Event": f"Server {condition}",
-        "Timestamp": str(timestamp)
-    }
-
-    hostname = socket.gethostname()
-    current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    filename = f"{log_directory}/{hostname}-{current_datetime}-serverHTTPS.log"
-    with open(filename, 'r+') as file:
-        logs = json.load(file)
-        logs.append(log_message)
-        file.seek(0)
-        json.dump(logs, file, indent=4)
-        file.truncate()
-        print(f"Server log saved in {filename}")
-
-def log_error(error_message):
-    timestamp = datetime.datetime.now()
-    log_message = {
-        "Event": "Error",
-        "Timestamp": str(timestamp),
-        "Error Message": error_message,
-        "Error Line": traceback.format_exc()
-    }
-    hostname = socket.gethostname()
-    current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    filename = f"{log_directory}/{hostname}-{current_datetime}-errorsHTTPS.log"
-    with open(filename, 'r+') as file:
-        logs = json.load(file)
-        logs.append(log_message)
-        file.seek(0)
-        json.dump(logs, file, indent=4)
-        file.truncate()
-        print(f"Error logged in {filename}")
-
-
-
-def log_attempt(self, username, password, method, status_code, user_agent):
+def log_attempt(self, username, password, method, status_code, user_agent, destinationIP):
     timestamp = datetime.datetime.now()
     log_message = {
         "Username": escape(username),
@@ -105,18 +53,8 @@ def log_attempt(self, username, password, method, status_code, user_agent):
         "URL": self.path,
         "Timestamp": str(timestamp)
     }  
-    
 
-    hostname = socket.gethostname()
-    current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    filename = f"{log_directory}/{hostname}-{current_datetime}-serverHTTPS.json"
-    with open(filename, 'r+') as file:
-        logs = json.load(file)
-        logs.append(log_message)
-        file.seek(0)
-        json.dump(logs, file, indent=4)
-        file.truncate()
-        print(f"Log saved in {filename}")
+    logger.info(json.dumps(log_message, indent=4))
 
 class IPv6Server(socketserver.TCPServer):
     address_family = socket.AF_INET6
@@ -141,9 +79,9 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(html.encode('utf-8'))
             user_agent = self.headers.get('User-Agent')
             
-            log_attempt(self, '', '', 'GET', '200', user_agent)
+            log_attempt(self, '', '', 'GET', '200', user_agent, destinationIP)
         except Exception as e:
-            log_error(str(e))
+            logger.error(str(e))
 
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
@@ -162,31 +100,20 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
         status_code = '200'
 
         try:
-            log_attempt(self, username, password, 'POST', status_code, user_agent)
+            log_attempt(self, username, password, 'POST', status_code, user_agent, destinationIP)
         except Exception as e:
-            log_error(str(e))
-
+            logger.error(str(e))
 
 if __name__ == '__main__':
     try:
-        create_log_files()
         destinationIP = get_ipv6_address()
         server_address = ('::', 4443)
         httpd = IPv6Server(server_address, MyHandler)
-        
-        # Create an SSL context
-        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        context.load_cert_chain(certfile='cert.pem', keyfile='key.pem', password='adminluan')
-        
-        # Wrap the HTTP server in SSL using the SSL context
-        httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
-        
-        print(f'''Server running on https://[{destinationIP}]:4443''')
-        write_server_log('starts')
+        print(f'''serverHTTPS running on http://[{destinationIP}]:4443''')
+        logger.info(f"SerserverHTTPSver starts at {datetime.datetime.now()}")
         httpd.serve_forever()
     except KeyboardInterrupt:
-        write_server_log('stops')
-        print('Server stopped')
+        logger.info(f"serverHTTPS stops at {datetime.datetime.now()}")
+        print('serverHTTPS stopped')
     except Exception as e:
-        log_error(str(e))
-
+        logger.error(str(e))
