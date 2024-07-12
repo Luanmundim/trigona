@@ -16,7 +16,6 @@ log_directory = "/home/ubuntu/log/server"
 os.makedirs(log_directory, exist_ok=True)
 
 hostname = socket.gethostname()
-current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 log_filename = f"{log_directory}/{hostname}-server.log"
 
 # Create a rotating log handler
