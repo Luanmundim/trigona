@@ -17,7 +17,7 @@ os.makedirs(log_directory, exist_ok=True)
 
 hostname = socket.gethostname()
 current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-log_filename = f"{log_directory}/{hostname}-{current_datetime}-server.log"
+log_filename = f"{log_directory}/{hostname}-server.log"
 
 # Create a rotating log handler
 log_handler = TimedRotatingFileHandler(log_filename, when="midnight", interval=1, backupCount=30)
