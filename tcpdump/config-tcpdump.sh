@@ -15,7 +15,7 @@ start_tcpdump() {
     echo "Starting tcpdump..."
     # Run the tcpdump command and save the output
     TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
-    sudo tcpdump -i any -w /home/ubuntu/log/tcpdump/${HOSTNAME}-${TIMESTAMP}-tcpdump.pcap &
+    sudo tcpdump ip6 -i any -w /home/ubuntu/log/tcpdump/${HOSTNAME}-${TIMESTAMP}-tcpdump.pcap &
     # Save the process ID of the tcpdump
     echo $! > tcpdump.pid
     echo "tcpdump started."
