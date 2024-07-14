@@ -14,21 +14,17 @@ import ipaddress
 ip = '185.153.176.238'
 
 # List of regions
-'''#regions = ['us-west1', 'southamerica-east1', 'europe-west1', 'me-west1', 'asia-east1']'''
-regions = ['us-central1']
+regions = ['us-west1', 'southamerica-east1', 'europe-west1', 'me-west1', 'asia-east1']
+
 
 #List of clusters and the number it will have in each region(subnet)
-'''clusters = {
+clusters = {
     'ipv6-control': 1,
     'ipv6-crawler': 1,
     'ipv6-dns': 1,
-    'ipv6-requests': 2
-}'''
-
-clusters = {
-    'ipv6-crawler': 2,
-    'ipv6-requests': 2
+    'ipv6-requests': 1
 }
+
 networks = ['network-trigona']
 
 def increment_ipv6(ipv6_address):
@@ -135,7 +131,7 @@ def createInstances():
                         --machine-type=e2-small \
                         --image=debian-11-bullseye-v20231113 \
                         --image-project=debian-cloud \
-                        --boot-disk-size=30 \
+                        --boot-disk-size=40 \
                         --subnet={region}-{cluster}-{networks[0]} \
                         --stack-type=IPV4_IPV6
                         ''')
@@ -160,13 +156,16 @@ def createNetwork():
 
 def createSubnets():
     try:
+        random_numbers = random.sample(range(256), 20)  # 20 subnets
+        index = 0
         for region in regions:
             print(f"Creating subnets for region {region}")
             for cluster in clusters:
                 print(f"Creating subnets for cluster {cluster}")
                 for network in networks:
                     print(f"Creating subnet for network {network}")
-                    random_number = random.randint(0, 255)
+                    random_number = random_numbers[index]
+                    index = (index + 1) % len(random_numbers)
                     os.system(f'''
                     gcloud compute networks subnets create {region}-{cluster}-{network} \
                     --network={network} \
