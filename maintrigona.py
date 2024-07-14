@@ -11,21 +11,24 @@ import ipaddress
 # ssh -p 5000 -i ~/.ssh/id_rsa 34.44.250.143
 #gcloud compute scp --port=5000 --zone=us-central1-a --recurse /home/ubuntu/ us-central1-ipv6-instances-0:/home/ubuntu/
 
-ip = '181.214.151.65'
+ip = '185.153.176.238'
 
 # List of regions
 '''#regions = ['us-west1', 'southamerica-east1', 'europe-west1', 'me-west1', 'asia-east1']'''
 regions = ['us-central1']
 
 #List of clusters and the number it will have in each region(subnet)
-'''#clusters = {
-#    'ipv6-control': 1,
-#    'ipv6-crawler': 2,
-#    'ipv6-dns': 2,
-#    'ipv6-requests': 2
-#}'''
-clusters = {'ipv6-crawler': 2, 'ipv6-requests': 2}
+'''clusters = {
+    'ipv6-control': 1,
+    'ipv6-crawler': 1,
+    'ipv6-dns': 1,
+    'ipv6-requests': 2
+}'''
 
+clusters = {
+    'ipv6-crawler': 2,
+    'ipv6-requests': 2
+}
 networks = ['network-trigona']
 
 def increment_ipv6(ipv6_address):
@@ -115,9 +118,9 @@ def checkFirewall():
 
 
 def createInstances():
-    #createNetwork()
-    #createSubnets()
-    #createFirewallRules()
+    createNetwork()
+    createSubnets()
+    createFirewallRules()
     try:
         for region in regions:
             print(f"Creating instances in region {region}")
@@ -187,7 +190,8 @@ def createFirewallRules():
         --direction ingress \
         --action allow \
         --rules=tcp \
-        --source-ranges 0::/0''')
+        --source-ranges 0::/0 \
+        --enable-logging''')
 
         os.system(f'''
         gcloud compute firewall-rules create {networks[0]}-allow-ipv4\
@@ -196,7 +200,9 @@ def createFirewallRules():
         --direction ingress \
         --action allow \
         --rules=tcp:2222,22 \
-        --source-ranges 0.0.0.0/0''')
+        --source-ranges 0.0.0.0/0 \
+        --enable-logging''')
+        
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
@@ -210,13 +216,15 @@ def configureInstance():
             print(f"Configuring instance {instanceName}")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get remove --purge man-db -y'")#consume too much time in the update process
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get update -y'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get upgrade -y'")
+            #os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get upgrade -y'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=\"--force-confold\"'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get install python3-dnspython -y'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt install at -y'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt install lsof'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt install jq -y'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get install python3-venv -y'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get install git python3-virtualenv libssl-dev libffi-dev build-essential libpython3-dev python3-minimal authbind virtualenv -y'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get install git -y'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='mkdir /home/ubuntu/log'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu && git clone https://github.com/Luanmundim/trigona'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/DNS/ && chmod +x config-DNS.sh'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/crawler/ && chmod +x config-crawler.sh'")
@@ -224,21 +232,17 @@ def configureInstance():
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/server/ && chmod +x config-server.sh'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/serverHTTPS/ && chmod +x config-serverHTTPS.sh'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/request && chmod +x config-request.sh'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/cowrie && chmod +x copy-cowrie.sh'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/cowrie && chmod +x cowrie-copy.sh'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd /home/ubuntu/trigona/serverHTTPS && openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -passout pass:adminluan -subj \"/C=US/ST=State/L=City/O=Organization/OU=Organizational Unit/CN=Common Name/emailAddress=email@example.com\"'")
             #os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='context.load_cert_chain(certfile=\"cert.pem\", keyfile=\"key.pem\", cafile=\"ca-cert.pem\")'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo apt-get install git python3-virtualenv libssl-dev libffi-dev build-essential libpython3-dev python3-minimal authbind virtualenv -y'")
+            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo adduser --disabled-password --gecos \"\" cowrie'")
 
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo adduser --disabled-password --gecos "" cowrie'") #testar commando
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo su - cowrie'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='git clone http://github.com/cowrie/cowrie'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='cd cowrie'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='python3 -m venv cowrie-env'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='source cowrie-env/bin/activate'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='python3 -m pip install --upgrade pip'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='python3 -m pip install --upgrade -r requirements.txt'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='wget https://raw.githubusercontent.com/Luanmundim/trigona/main/cowrie/cowrie.cfg && mv cowrie.cfg /home/cowrie/cowrie/etc/'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='deactivate'")
-            os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='exit'")
+            os.system(f"gcloud compute ssh cowrie@{instanceName} --zone={zone} --command='cd /home/cowrie && git clone http://github.com/cowrie/cowrie'")
+
+            os.system(f"gcloud compute ssh cowrie@{instanceName} --zone={zone} --command='cd cowrie && python3 -m venv cowrie-env && source cowrie-env/bin/activate && python3 -m pip install --upgrade pip && python3 -m pip install --upgrade -r requirements.txt'")
+            os.system(f"gcloud compute ssh cowrie@{instanceName} --zone={zone} --command='wget https://raw.githubusercontent.com/Luanmundim/trigona/main/cowrie/cowrie.cfg && mv cowrie.cfg /home/cowrie/cowrie/etc/'")
+            #os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='deactivate'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo iptables -t nat -A PREROUTING -p tcp --dport 2223 -j REDIRECT --to-port 23 && sudo ip6tables -t nat -A PREROUTING -p tcp --dport 2223 -j REDIRECT --to-port 23'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo iptables -t nat -A PREROUTING -p tcp --dport 23 -j REDIRECT --to-port 2223 && sudo ip6tables -t nat -A PREROUTING -p tcp --dport 23 -j REDIRECT --to-port 2223'")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --command='sudo ip6tables -t nat -A PREROUTING -p tcp --dport 8080 -j REDIRECT --to-port 80 && sudo ip6tables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080'")
@@ -259,7 +263,7 @@ def startTrigonaReal():
             print(f"Starting instance {instanceName}")
             os.system(f"gcloud compute ssh {instanceName} --zone={zone} --ssh-flag='-p 2222' --command='echo \"0 0,12 * * * /usr/bin/python3 /home/ubuntu/trigona/runningAll.py\" | crontab -'")
 
-            
+
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         return
@@ -280,6 +284,10 @@ def modifyTrigona(command):
             os.system(f'gcloud compute ssh {instanceName} --zone="{zone}" --ssh-flag="-p 2222" --command="cd /home/ubuntu/trigona/serverHTTPS && ./config-serverHTTPS.sh {command}"')
             print('Checking the status of the cowrie: ')
             os.system(f'gcloud compute ssh {instanceName} --zone="{zone}" --ssh-flag="-p 2222" --command="/home/cowrie/cowrie/bin/cowrie {command}"')
+            print('Checking the status of the request: ')
+            os.system(f'gcloud compute ssh {instanceName} --zone="{zone}" --ssh-flag="-p 2222" --command="cd /home/ubuntu/trigona/request && ./config-request.sh {command}"')
+            print('Checking the status of the tcpdump: ')
+            os.system(f'gcloud compute ssh {instanceName} --zone="{zone}" --ssh-flag="-p 2222" --command="cd /home/ubuntu/trigona/tcpdump && sudo ./config-tcpdump.sh {command}"')
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
@@ -323,10 +331,10 @@ def colectLogs():
     current_datetime = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     for instance, zone in zip(instances, zones):
         log_directory = f"log-{instance}-{current_datetime}"
-        os.makedirs(log_directory)
+        #os.makedirs(log_directory)
         ipv4_address = subprocess.Popen(f"gcloud compute instances describe {instance} --zone={zone} --format='value(networkInterfaces[0].accessConfigs[0].natIP)'", shell=True, stdout=subprocess.PIPE).stdout
         ipv4_address = ipv4_address.read().decode().strip()
-        os.system(f'scp -r -P 2222 -i ~/.ssh/id_rsa -o "StrictHostKeyChecking=no" ubuntu@{ipv4_address}:/home/ubuntu/log /home/ubuntu/Desktop/mestrado/log/{log_directory}')
+        os.system(f'scp -r -P 2222 -i ~/.ssh/id_rsa -o "StrictHostKeyChecking=no" ubuntu@{ipv4_address}:/home/ubuntu/log /home/ubuntu/Desktop/mestrado/log/{log_directory}/')
 
 def sendoFilestoInstance():
     instances, zones = getInstances()
